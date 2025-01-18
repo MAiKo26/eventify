@@ -1,9 +1,25 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import * as z from "zod";
 
-// constants
+// schemas
+export const registerFormSchema = z.object({
+  name: z
+    .string()
+    .min(2, "Name must be at least 2 characters")
+    .max(50, "Name must be less than 50 characters"),
+  email: z.string().email("Please enter a valid email address"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+});
 
-const api = "http://localhost:3636/api/v1/";
+export type registerFormSchemaType = z.infer<typeof registerFormSchema>;
+
+export const loginFormSchema = z.object({
+  email: z.string().email("Please enter a valid email address"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+});
+
+export type loginFormSchemaType = z.infer<typeof loginFormSchema>;
 
 // interfaces
 
@@ -15,7 +31,7 @@ export interface User {
   date: string;
   verified: boolean;
   online: boolean;
-  role: "Admin" | "Participant";
+  role: "Admin" | "Participant" | "Organizer";
 }
 
 export interface Event {
@@ -53,6 +69,7 @@ export interface AppState {
   allMessages: Message[];
 
   isLoading: {
+    token: boolean;
     users: boolean;
     events: boolean;
     tasks: boolean;
@@ -61,7 +78,7 @@ export interface AppState {
 
   // Actions
 
-  setToken: (token: string) => void;
+  setToken: (token: string | null) => void;
   setCurrentUser: (user: User) => void;
 
   setAllUsers: (users: User[]) => void;
@@ -78,19 +95,21 @@ export interface AppState {
   fetchEvents: () => Promise<void>;
   fetchTasks: () => Promise<void>;
   fetchMessages: () => Promise<void>;
+  fetchPrivateMessage: (id: string) => Promise<void>;
 
-  login: () => void;
+  login: (values: loginFormSchemaType) => void;
   logout: () => void;
+  register: (values: registerFormSchemaType) => void;
 }
 
 // store
 
-const useStore = create<AppState>()(
+const useAppStore = create<AppState>()(
   persist(
     (set, get) => ({
       // Initial State
 
-      token: sessionStorage.getItem("authToken"),
+      token: sessionStorage.getItem("authToken") || null,
       currentUser: null,
       allUsers: [],
       allEvents: [],
@@ -98,6 +117,7 @@ const useStore = create<AppState>()(
       allMessages: [],
 
       isLoading: {
+        token: false,
         users: false,
         events: false,
         tasks: false,
@@ -129,45 +149,220 @@ const useStore = create<AppState>()(
         try {
           state.setLoading("users", true);
 
-          const response = await fetch(`${api}user`, {
-            method: "GET",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${state.token}`,
+          const response = await fetch(
+            `${process.env.NEXT_PUBLIC_API_URL}/auth/identify`,
+            {
+              method: "GET",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${state.token}`,
+              },
             },
-          });
+          );
 
           if (!response.ok) {
-            throw new Error("Failed to fetch user");
+            throw new Error("Failed to fetch current user");
           }
 
           const user: User = await response.json();
 
           if (!user) {
-            state.logout();
-            return;
+            throw new Error("Failed to fetch current user");
           }
+
           set({ currentUser: user });
+        } catch {
+          state.logout();
+        } finally {
           state.setLoading("users", false);
-        } catch (error) {
-          console.error("Failed to fetch user:", error);
         }
       },
-      fetchUsers: async () => {},
-      fetchEvents: async () => {},
-      fetchTasks: async () => {},
-      fetchMessages: async () => {},
+      fetchUsers: async () => {
+        const state = get();
+        try {
+          state.setLoading("users", true);
+          const response = await fetch(
+            `${process.env.NEXT_PUBLIC_API_URL}/users`,
+            {
+              method: "GET",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${state.token}`,
+              },
+            },
+          );
+
+          if (!response.ok) {
+            throw new Error("Failed to fetch users");
+          }
+
+          const users: User[] = await response.json();
+
+          set({ allUsers: users });
+        } finally {
+          state.setLoading("users", false);
+        }
+      },
+      fetchEvents: async () => {
+        const state = get();
+        try {
+          state.setLoading("events", true);
+          const response = await fetch(
+            `${process.env.NEXT_PUBLIC_API_URL}/events`,
+            {
+              method: "GET",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${state.token}`,
+              },
+            },
+          );
+
+          if (!response.ok) {
+            throw new Error("Failed to fetch events");
+          }
+
+          const events: Event[] = await response.json();
+
+          set({ allEvents: events });
+        } finally {
+          state.setLoading("events", false);
+        }
+      },
+      fetchTasks: async () => {
+        const state = get();
+        try {
+          state.setLoading("tasks", true);
+          const response = await fetch(
+            `${process.env.NEXT_PUBLIC_API_URL}/tasks`,
+            {
+              method: "GET",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${state.token}`,
+              },
+            },
+          );
+
+          if (!response.ok) {
+            throw new Error("Failed to fetch tasks");
+          }
+
+          const tasks: Task[] = await response.json();
+
+          set({ allTasks: tasks });
+        } finally {
+          state.setLoading("tasks", false);
+        }
+      },
+      fetchMessages: async () => {
+        const state = get();
+        try {
+          state.setLoading("messages", true);
+          const response = await fetch(
+            `${process.env.NEXT_PUBLIC_API_URL}/chat/messages`,
+            {
+              method: "GET",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${state.token}`,
+              },
+            },
+          );
+
+          if (!response.ok) {
+            throw new Error("Failed to fetch messages");
+          }
+
+          const messages: Message[] = await response.json();
+
+          set({ allMessages: messages });
+        } finally {
+          state.setLoading("messages", false);
+        }
+      },
+      fetchPrivateMessage: async (id) => {
+        const state = get();
+        try {
+          state.setLoading("messages", true);
+          const response = await fetch(
+            `${process.env.NEXT_PUBLIC_API_URL}/chat/messages/${id}`,
+            {
+              method: "GET",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${state.token}`,
+              },
+            },
+          );
+
+          if (!response.ok) {
+            throw new Error("Failed to fetch messages");
+          }
+
+          const messages: Message[] = await response.json();
+
+          set({ allMessages: messages });
+        } finally {
+          state.setLoading("messages", false);
+        }
+      },
 
       // Auth Actions
-      login: () => {
-        // TODO
+      login: async (values: loginFormSchemaType) => {
+        const state = get();
+        try {
+          state.setLoading("token", true);
+          const response = await fetch(
+            `${process.env.NEXT_PUBLIC_API_URL}/auth/login`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify(values),
+            },
+          );
+
+          if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || "Login failed");
+          }
+
+          const { token, user } = await response.json();
+          state.setToken(token);
+          state.setCurrentUser(user);
+        } finally {
+          state.setLoading("token", false);
+        }
       },
       logout: () => {
-        sessionStorage.clear();
+        const state = get();
+        state.setLoading("token", true);
         set({
           token: null,
           currentUser: null,
         });
+        localStorage.removeItem("authToken");
+        window.location.href = "/auth/login";
+        state.setLoading("token", false);
+      },
+      register: async (values: registerFormSchemaType) => {
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/auth/register`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(values),
+          },
+        );
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.message || "Register failed");
+        }
       },
     }),
     {
@@ -180,4 +375,4 @@ const useStore = create<AppState>()(
   ),
 );
 
-export default useStore;
+export default useAppStore;

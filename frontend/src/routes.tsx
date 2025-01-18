@@ -15,6 +15,7 @@ import { NotFound } from "./app/not-found";
 import { Toaster } from "./components/ui/toaster";
 import SidebarLayout from "./layouts/sidebar-layout";
 import { ThemeProvider } from "./components/theme-provider";
+import AuthLayout from "./layouts/auth-layout";
 
 function App() {
   return (
@@ -28,8 +29,9 @@ function App() {
             <Route path="admin">
               <Route index element={<AdminPage />} />
               <Route path="analytics" element={<AnalyticsPage />} />
-              <Route path="settings" element={<SettingsPage />} />
             </Route>
+
+            <Route path="settings" element={<SettingsPage />} />
 
             <Route path="chat" element={<ChatPage />} />
 
@@ -47,7 +49,7 @@ function App() {
 
             <Route path="*" element={<NotFound />} />
           </Route>
-          <Route path="auth">
+          <Route path="auth" element={<AuthLayout />}>
             <Route path="login" element={<LoginPage />}></Route>
             <Route path="register" element={<RegisterPage />}></Route>
           </Route>

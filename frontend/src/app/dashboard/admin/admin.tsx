@@ -1,6 +1,20 @@
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -9,69 +23,33 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import useAppStore from "@/store/useStore";
+import { useState } from "react";
 import { Link } from "react-router";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-
-const users = [
-  { id: 1, name: "John Doe", email: "john@example.com", role: "Admin" },
-  { id: 2, name: "Jane Smith", email: "jane@example.com", role: "Participant" },
-  { id: 3, name: "Bob Johnson", email: "bob@example.com", role: "Participant" },
-];
-
-const pendingUsers = [
-  {
-    id: 4,
-    name: "Alice Brown",
-    email: "alice@example.com",
-    requestDate: "2024-01-10",
-  },
-  {
-    id: 5,
-    name: "Charlie Wilson",
-    email: "charlie@example.com",
-    requestDate: "2024-01-12",
-  },
-];
-
-const events = [
-  { id: 1, name: "Summer Festival", date: "2023-07-15", participants: 150 },
-  { id: 2, name: "Tech Conference", date: "2023-08-22", participants: 300 },
-  { id: 3, name: "Charity Run", date: "2023-09-10", participants: 500 },
-];
 
 export default function AdminDashboard() {
+  const { allUsers, allEvents, isLoading } = useAppStore();
   const [searchTerm, setSearchTerm] = useState("");
   const [newUser, setNewUser] = useState({ name: "", email: "", role: "" });
 
-  const filteredUsers = users.filter(
+  const filteredUsers = allUsers.filter(
     (user) =>
       user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
-  const filteredEvents = events.filter((event) =>
-    event.name.toLowerCase().includes(searchTerm.toLowerCase()),
+  const filteredEvents = allEvents.filter((event) =>
+    event.title.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
-  const filteredPendingUsers = pendingUsers.filter((pendingUser) =>
-    pendingUser.name.toLowerCase().includes(searchTerm.toLowerCase()),
+  const filteredPendingUsers = allUsers.filter(
+    (pendingUser) =>
+      pendingUser.verified === false &&
+      pendingUser.name.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
-  const handleAddUser = () => {
+  const handleAddUser = async () => {
     // Add user logic here
     console.log("Adding user:", newUser);
     // Reset form
@@ -83,9 +61,6 @@ export default function AdminDashboard() {
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-3xl font-bold">Admin Dashboard</h1>
         <div className="space-x-4">
-          <Button asChild variant="outline">
-            <Link to="/dashboard/admin/settings">Settings</Link>
-          </Button>
           <Button asChild variant="outline">
             <Link to="/dashboard/admin/analytics">Analytics</Link>
           </Button>
@@ -123,67 +98,89 @@ export default function AdminDashboard() {
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
-                <TableBody>
-                  <TableRow className="bg-muted/50">
-                    <TableCell>
-                      <Input
-                        placeholder="Enter name"
-                        value={newUser.name}
-                        onChange={(e) =>
-                          setNewUser({ ...newUser, name: e.target.value })
-                        }
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Input
-                        placeholder="Enter email"
-                        value={newUser.email}
-                        onChange={(e) =>
-                          setNewUser({ ...newUser, email: e.target.value })
-                        }
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Select
-                        value={newUser.role}
-                        onValueChange={(value: string) =>
-                          setNewUser({ ...newUser, role: value })
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select role" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Admin">Admin</SelectItem>
-                          <SelectItem value="Participant">
-                            Participant
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        onClick={handleAddUser}
-                        variant="default"
-                        size="sm"
-                      >
-                        Add User
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                  {filteredUsers.map((user) => (
-                    <TableRow key={user.id}>
-                      <TableCell>{user.name}</TableCell>
-                      <TableCell>{user.email}</TableCell>
-                      <TableCell>{user.role}</TableCell>
+                {isLoading.users ? (
+                  <TableBody>
+                    {Array.from({ length: 5 }).map((_, index) => (
+                      <TableRow key={index}>
+                        <TableCell>
+                          <Skeleton className="h-12 w-full" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-12 w-full" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-12 w-full" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-12 w-full" />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                ) : (
+                  <TableBody>
+                    <TableRow className="bg-muted/50">
                       <TableCell>
-                        <Button variant="outline" size="sm">
-                          Edit
+                        <Input
+                          placeholder="Enter name"
+                          value={newUser.name}
+                          onChange={(e) =>
+                            setNewUser({ ...newUser, name: e.target.value })
+                          }
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Input
+                          placeholder="Enter email"
+                          value={newUser.email}
+                          onChange={(e) =>
+                            setNewUser({ ...newUser, email: e.target.value })
+                          }
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Select
+                          value={newUser.role}
+                          onValueChange={(value: string) =>
+                            setNewUser({ ...newUser, role: value })
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select role" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Admin">Admin</SelectItem>
+                            <SelectItem value="Participant">
+                              Participant
+                            </SelectItem>
+                            <SelectItem value="Organizer">Organizer</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          onClick={handleAddUser}
+                          variant="default"
+                          size="sm"
+                        >
+                          Add User
                         </Button>
                       </TableCell>
                     </TableRow>
-                  ))}
-                </TableBody>
+                    {filteredUsers.map((user) => (
+                      <TableRow key={user.id}>
+                        <TableCell>{user.name}</TableCell>
+                        <TableCell>{user.email}</TableCell>
+                        <TableCell>{user.role}</TableCell>
+                        <TableCell>
+                          <Button variant="outline" size="sm">
+                            Edit
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                )}
               </Table>
             </CardContent>
           </Card>
@@ -207,31 +204,52 @@ export default function AdminDashboard() {
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
-                <TableBody>
-                  {filteredPendingUsers.map((user) => (
-                    <TableRow key={user.id}>
-                      <TableCell>{user.name}</TableCell>
-                      <TableCell>{user.email}</TableCell>
-                      <TableCell>{user.requestDate}</TableCell>
-                      <TableCell className="space-x-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="bg-green-50"
-                        >
-                          Accept
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="bg-red-50"
-                        >
-                          Reject
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
+                {isLoading.users ? (
+                  <TableBody>
+                    {Array.from({ length: 5 }).map((_, index) => (
+                      <TableRow key={index}>
+                        <TableCell>
+                          <Skeleton className="h-12 w-full" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-12 w-full" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-12 w-full" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-12 w-full" />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                ) : (
+                  <TableBody>
+                    {filteredPendingUsers.map((user) => (
+                      <TableRow key={user.id}>
+                        <TableCell>{user.name}</TableCell>
+                        <TableCell>{user.email}</TableCell>
+                        <TableCell>{user.date}</TableCell>
+                        <TableCell className="space-x-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="bg-green-50"
+                          >
+                            Accept
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="bg-red-50"
+                          >
+                            Reject
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                )}
               </Table>
             </CardContent>
           </Card>
@@ -247,26 +265,47 @@ export default function AdminDashboard() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Event Name</TableHead>
+                    <TableHead>Event Title</TableHead>
                     <TableHead>Date</TableHead>
-                    <TableHead>Participants</TableHead>
+                    <TableHead>Location</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
-                <TableBody>
-                  {filteredEvents.map((event) => (
-                    <TableRow key={event.id}>
-                      <TableCell>{event.name}</TableCell>
-                      <TableCell>{event.date}</TableCell>
-                      <TableCell>{event.participants}</TableCell>
-                      <TableCell>
-                        <Button variant="outline" size="sm">
-                          Manage
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
+                {isLoading.events ? (
+                  <TableBody>
+                    {Array.from({ length: 3 }).map((_, index) => (
+                      <TableRow key={index}>
+                        <TableCell>
+                          <Skeleton className="h-12 w-full" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-12 w-full" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-12 w-full" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-12 w-full" />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                ) : (
+                  <TableBody>
+                    {filteredEvents.map((event) => (
+                      <TableRow key={event.id}>
+                        <TableCell>{event.title}</TableCell>
+                        <TableCell>{event.date}</TableCell>
+                        <TableCell>{event.location}</TableCell>
+                        <TableCell>
+                          <Button variant="outline" size="sm">
+                            Manage
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                )}
               </Table>
             </CardContent>
           </Card>

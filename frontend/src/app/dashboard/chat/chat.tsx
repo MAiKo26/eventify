@@ -3,45 +3,27 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-
-type Message = {
-  id: number;
-  sender: string;
-  content: string;
-  timestamp: string;
-};
+import useAppStore, { Message } from "@/store/useStore";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function ChatPage() {
-  const [messages, setMessages] = useState<Message[]>([
-    { id: 1, sender: "Alice", content: "Hey everyone!", timestamp: "10:00 AM" },
-    {
-      id: 2,
-      sender: "Bob",
-      content: "Hi Alice, how's it going?",
-      timestamp: "10:02 AM",
-    },
-    {
-      id: 3,
-      sender: "Charlie",
-      content: "Hello there!",
-      timestamp: "10:05 AM",
-    },
-  ]);
+  const { allMessages, setAllMessages, isLoading } = useAppStore();
+
   const [newMessage, setNewMessage] = useState("");
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
     if (newMessage.trim()) {
       const message: Message = {
-        id: messages.length + 1,
-        sender: "You",
+        id: allMessages.length + 1,
+        senderId: "You",
         content: newMessage,
         timestamp: new Date().toLocaleTimeString([], {
           hour: "2-digit",
           minute: "2-digit",
         }),
       };
-      setMessages([...messages, message]);
+      setAllMessages([...allMessages, message]);
       setNewMessage("");
     }
   };
@@ -52,19 +34,30 @@ export default function ChatPage() {
         <CardTitle>Chat</CardTitle>
       </CardHeader>
       <CardContent className="flex h-[calc(100%-8rem)] flex-col gap-4">
-        <ScrollArea className="flex-1 pr-4">
-          {messages.map((message) => (
-            <div key={message.id} className="mb-4">
-              <div className="font-semibold">{message.sender}</div>
-              <div className="rounded-lg bg-gray-100 p-2">
-                {message.content}
+        {isLoading.messages ? (
+          <ScrollArea className="flex flex-1 gap-5 pr-4">
+            {Array.from({ length: 10 }).map((_, index) => (
+              <div key={index} className="mb-4 flex flex-col gap-2">
+                <Skeleton className="h-5 w-40" />
+                <Skeleton className="h-10 w-full" />
               </div>
-              <div className="mt-1 text-xs text-gray-500">
-                {message.timestamp}
+            ))}
+          </ScrollArea>
+        ) : (
+          <ScrollArea className="flex-1 pr-4">
+            {allMessages.map((message) => (
+              <div key={message.id} className="mb-4">
+                <div className="font-semibold">{message.senderId}</div>
+                <div className="rounded-lg bg-gray-100 p-2 dark:bg-gray-900">
+                  {message.content}
+                </div>
+                <div className="mt-1 text-xs text-gray-600 dark:text-gray-400">
+                  {message.timestamp}
+                </div>
               </div>
-            </div>
-          ))}
-        </ScrollArea>
+            ))}
+          </ScrollArea>
+        )}
         <form onSubmit={handleSendMessage} className="mt-4 flex gap-2">
           <Input
             value={newMessage}
@@ -72,7 +65,9 @@ export default function ChatPage() {
             placeholder="Type your message..."
             className="flex-1"
           />
-          <Button type="submit">Send</Button>
+          <Button type="submit" disabled={isLoading.messages}>
+            Send
+          </Button>
         </form>
       </CardContent>
     </Card>

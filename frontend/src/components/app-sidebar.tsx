@@ -13,9 +13,12 @@ import {
   Home,
   List,
   MessageCircle,
+  Settings,
   UserRoundCog,
 } from "lucide-react";
 import { Link } from "react-router";
+import { Button } from "./ui/button";
+import useAppStore from "@/store/useStore";
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: Home },
@@ -23,9 +26,11 @@ const navigation = [
   { name: "Tasks", href: "/dashboard/tasks", icon: List },
   { name: "Chat", href: "/dashboard/chat", icon: MessageCircle },
   { name: "Admin", href: "/dashboard/admin", icon: UserRoundCog },
+  { name: "Settings", href: "/dashboard/settings", icon: Settings },
 ];
 
 export function AppSidebar() {
+  const { currentUser } = useAppStore();
   return (
     <Sidebar>
       <SidebarHeader>
@@ -41,10 +46,21 @@ export function AppSidebar() {
               {navigation.map((item) => (
                 <SidebarMenuItem key={item.name}>
                   <SidebarMenuButton asChild>
-                    <Link to={item.href}>
-                      <item.icon className="h-4 w-4" />
-                      <span>{item.name}</span>
-                    </Link>
+                    {item.name === "Admin" && currentUser?.role !== "Admin" ? (
+                      <Button
+                        className="flex justify-start"
+                        disabled
+                        variant="ghost"
+                      >
+                        <item.icon className="h-4 w-4" />
+                        <span>{item.name}</span>
+                      </Button>
+                    ) : (
+                      <Link to={item.href}>
+                        <item.icon className="h-4 w-4" />
+                        <span>{item.name}</span>
+                      </Link>
+                    )}
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
