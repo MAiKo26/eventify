@@ -16,7 +16,7 @@ import { Outlet } from "react-router";
 function SidebarLayout() {
   const { logout } = useAppStore();
   useEffect(() => {
-    const token = localStorage.getItem("authToken");
+    const token = sessionStorage.getItem("authToken");
     if (!token) {
       window.location.href = "/auth/login";
     }
