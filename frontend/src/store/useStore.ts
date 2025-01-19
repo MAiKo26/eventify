@@ -28,7 +28,7 @@ export interface User {
   name: string;
   password: string;
   email: string;
-  date: string;
+  createdAt: string;
   verified: boolean;
   online: boolean;
   role: "Admin" | "Participant" | "Organizer";
@@ -38,9 +38,9 @@ export interface Event {
   id: number;
   title: string;
   description: string;
-  date: string;
+  createdAt: string;
   location: string;
-  createdBy: string;
+  createdBy: number;
 }
 
 export interface Task {
@@ -48,14 +48,23 @@ export interface Task {
   title: string;
   description: string;
   status: string;
-  assignedTo: string;
+  assignedTo: number;
   eventId: number;
+  comments: Comment[];
+}
+
+export interface Comment {
+  id: number;
+  content: string;
+  senderId: number;
+  timestamp: string;
+  taskId: number;
 }
 
 export interface Message {
   id: number;
   content: string;
-  senderId: string;
+  senderId: number;
   timestamp: string;
 }
 
@@ -343,7 +352,7 @@ const useAppStore = create<AppState>()(
           token: null,
           currentUser: null,
         });
-        localStorage.removeItem("authToken");
+        sessionStorage.removeItem("authToken");
         window.location.href = "/auth/login";
         state.setLoading("token", false);
       },
