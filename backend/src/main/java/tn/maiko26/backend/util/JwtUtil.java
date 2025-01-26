@@ -3,6 +3,8 @@ package tn.maiko26.backend.util;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
+import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -15,6 +17,7 @@ import tn.maiko26.backend.service.UserService;
 import java.util.Date;
 import java.util.List;
 
+@Slf4j
 @Component
 public class JwtUtil {
 
@@ -41,16 +44,13 @@ public class JwtUtil {
                 .compact();
     }
 
-    public boolean validateToken(String token) throws CustomException {
-        try {
-            Jwts.parser()
-                    .setSigningKey(jwtSecret)
-                    .build()
-                    .parseClaimsJws(token);
-            return true;
-        } catch (JwtException | IllegalArgumentException e) {
-            return false;
-        }
+    public void validateToken(String token) throws CustomException {
+
+        Jwts.parser()
+                .setSigningKey(jwtSecret)
+                .build()
+                .parseClaimsJws(token);
+
     }
 
     public String extractEmail(String token) {
@@ -60,6 +60,15 @@ public class JwtUtil {
                 .parseClaimsJws(token)
                 .getBody()
                 .getSubject();
+    }
+
+    public String extractTokenFromRequestHeader(HttpServletRequest request) {
+        String bearerToken = request.getHeader("Authorization");
+
+        if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
+            return bearerToken.substring(7);
+        }
+        throw new JwtException("No token provided.");
     }
 
     public Authentication getAuthentication(String email) {
