@@ -24,8 +24,8 @@ public class WebMvcConfig implements WebMvcConfigurer {
                 .excludePathPatterns("/swagger-ui/**")
                 .excludePathPatterns("/auth/**");
 
-        registry.addInterceptor(authRateLimitInterceptor)
-                .addPathPatterns("/auth/**");
+//        registry.addInterceptor(authRateLimitInterceptor)
+//                .addPathPatterns("/auth/**");
     }
 
     @Override
